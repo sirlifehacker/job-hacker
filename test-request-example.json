@@ -1,0 +1,45 @@
+{
+  "templateBase64": "REPLACE_WITH_YOUR_BASE64_ENCODED_DOCX_TEMPLATE",
+  "data": {
+    "summary_bullets": [
+      "Experienced software developer with 5+ years in web development",
+      "Strong problem-solving skills and attention to detail",
+      "Proven track record of delivering high-quality solutions"
+    ],
+    "head_vendor_mgmt_bullets": [
+      "Managed vendor relationships across multiple regions",
+      "Optimized vendor processes resulting in 20% cost reduction"
+    ],
+    "eu_vendor_partner_bullets": [
+      "Collaborated with European vendor partners",
+      "Streamlined cross-border operations"
+    ],
+    "na_sales_ops_bullets": [
+      "Led North American sales operations",
+      "Increased sales efficiency by 15%"
+    ],
+    "decathlon_bullets": [
+      "Worked on Decathlon project",
+      "Delivered key features on time"
+    ],
+    "pwc_bullets": [
+      "Consulted for PwC",
+      "Implemented enterprise solutions"
+    ],
+    "virtusa_bullets": [
+      "Developed solutions at Virtusa",
+      "Collaborated with global teams"
+    ],
+    "saltnsoap_bullets": [
+      "Built e-commerce platform",
+      "Improved user experience"
+    ],
+    "international_bullets": [
+      "Managed international projects",
+      "Worked with diverse teams"
+    ],
+    "skills": "JavaScript, Node.js, Express, React, Python, SQL, MongoDB, Docker, AWS",
+    "tools": "VS Code, Git, Docker, AWS Console, Postman, Jira, Confluence"
+  }
+}
+
