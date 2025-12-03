@@ -141,13 +141,33 @@ app.post("/render", (req, res) => {
 
     // Step 1: Convert Base64 string to Buffer
     // This decodes the Base64-encoded DOCX template back to binary data
+    // First, clean the Base64 string (remove whitespace, newlines that n8n might add)
+    const cleanedBase64 = templateBase64.replace(/\s/g, "");
+    
     let templateBuffer;
     try {
-      templateBuffer = Buffer.from(templateBase64, "base64");
+      templateBuffer = Buffer.from(cleanedBase64, "base64");
+      
+      // Validate that we got a reasonable buffer (DOCX files are typically at least a few KB)
+      if (templateBuffer.length < 100) {
+        return res.status(400).json({
+          success: false,
+          error: "Template appears to be too small or invalid. Decoded size: " + templateBuffer.length + " bytes.",
+        });
+      }
+      
+      // Check for DOCX file signature (ZIP files start with PK, which DOCX files are)
+      const fileSignature = templateBuffer.slice(0, 2).toString("hex");
+      if (fileSignature !== "504b") {
+        return res.status(400).json({
+          success: false,
+          error: "Template does not appear to be a valid DOCX file. Expected ZIP signature (PK), got: " + fileSignature,
+        });
+      }
     } catch (error) {
       return res.status(400).json({
         success: false,
-        error: "Invalid Base64 encoding in templateBase64: " + error.message,
+        error: "Invalid Base64 encoding in templateBase64: " + error.message + ". Make sure the Base64 string is complete and not truncated.",
       });
     }
 
@@ -156,10 +176,26 @@ app.post("/render", (req, res) => {
     let zip;
     try {
       zip = new PizZip(templateBuffer);
+      
+      // Validate that the ZIP contains required DOCX files
+      const requiredFiles = [
+        "[Content_Types].xml",
+        "_rels/.rels",
+        "word/document.xml"
+      ];
+      const zipFiles = Object.keys(zip.files);
+      const missingFiles = requiredFiles.filter(file => !zipFiles.includes(file));
+      
+      if (missingFiles.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid DOCX template: Missing required files: ${missingFiles.join(", ")}. The file may be corrupted or not a valid DOCX file.`,
+        });
+      }
     } catch (error) {
       return res.status(400).json({
         success: false,
-        error: "Invalid DOCX template format: " + error.message,
+        error: "Invalid DOCX template format (not a valid ZIP file): " + error.message,
       });
     }
 
@@ -174,9 +210,31 @@ app.post("/render", (req, res) => {
         linebreaks: true,
       });
     } catch (error) {
+      // Docxtemplater "Multi error" contains detailed information about what's wrong
+      let errorMessage = "Failed to initialize Docxtemplater: ";
+      
+      if (error.name === "MultiError" && error.errors && Array.isArray(error.errors)) {
+        // Extract all error messages from the Multi error
+        const errorDetails = error.errors.map((err, index) => {
+          const errMsg = err.properties?.explanation || err.message || String(err);
+          return `Error ${index + 1}: ${errMsg}`;
+        }).join("; ");
+        errorMessage += errorDetails;
+        
+        // Log full error details for debugging
+        console.error("Docxtemplater Multi error details:", JSON.stringify(error.errors, null, 2));
+      } else {
+        errorMessage += error.message;
+      }
+      
+      // Log the full error for debugging
+      console.error("Docxtemplater initialization error:", error);
+      console.error("Template buffer size:", templateBuffer.length, "bytes");
+      console.error("ZIP file count:", Object.keys(zip.files).length);
+      
       return res.status(500).json({
         success: false,
-        error: "Failed to initialize Docxtemplater: " + error.message,
+        error: errorMessage,
       });
     }
 
