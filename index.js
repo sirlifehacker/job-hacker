@@ -58,12 +58,16 @@ app.get("/", (req, res) => {
  * Request body:
  * {
  *   "templateBase64": "string",  // Base64-encoded DOCX template
- *   "data": {                    // JSON object with resume fields
+ *   "data": {                    // JSON object OR JSON string with resume fields
  *     "summary_bullets": [...],
  *     "skills": "string",
  *     ...
  *   }
  * }
+ * 
+ * Note: The "data" field can be either:
+ *   - A JSON object: { "summary_bullets": [...], "skills": "..." }
+ *   - A JSON string: "{\"summary_bullets\": [...], \"skills\": \"...\"}"
  * 
  * Response (success):
  * {
@@ -96,6 +100,28 @@ app.post("/render", (req, res) => {
       return res.status(400).json({
         success: false,
         error: "Missing required field: data",
+      });
+    }
+
+    // Parse data if it's a JSON string, otherwise use it as-is (already an object)
+    // This allows flexibility: data can be either a JSON object or a JSON string
+    let parsedData;
+    if (typeof data === "string") {
+      try {
+        parsedData = JSON.parse(data);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid JSON string in data field: " + error.message,
+        });
+      }
+    } else if (typeof data === "object" && data !== null) {
+      // Already an object, use it directly
+      parsedData = data;
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: "Data field must be either a JSON object or a valid JSON string",
       });
     }
 
@@ -154,9 +180,9 @@ app.post("/render", (req, res) => {
       });
     }
 
-    // Step 4: Inject the JSON data into the template
+    // Step 4: Inject the parsed JSON data into the template
     // This replaces placeholders in the template (e.g., {summary_bullets}) with actual data
-    doc.setData(data);
+    doc.setData(parsedData);
 
     // Step 5: Render the template
     // This processes all the placeholders and merges the data
